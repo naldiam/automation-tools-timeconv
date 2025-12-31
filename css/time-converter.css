@@ -1,0 +1,28 @@
+body {
+  background: #020617;
+  color: #e5e7eb;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.card {
+  max-width: 720px;
+  margin: 40px auto;
+  padding: 24px;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+}
+
+button {
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}

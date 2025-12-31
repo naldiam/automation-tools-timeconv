@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Time & SLA Converter</title>
+
+<style>
+body {
+  font-family: Inter, system-ui, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  padding: 32px;
+}
+
+.card {
+  max-width: 820px;
+  margin: auto;
+  background: #020617;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+
+h2 {
+  margin-top: 0;
+}
+
+label {
+  display: block;
+  margin-top: 16px;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin-top: 6px;
+  border-radius: 8px;
+  background: #020617;
+  color: #e5e7eb;
+  border: 1px solid #1e293b;
+  font-size: 15px;
+}
+
+input::placeholder {
+  color: #64748b;
+}
+
+button {
+  margin-top: 20px;
+  padding: 14px;
+  width: 100%;
+  border-radius: 8px;
+  border: none;
+  background: #dc2626;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.result {
+  margin-top: 24px;
+  padding: 16px;
+  background: #020617;
+  border-radius: 8px;
+  border: 1px solid #1e293b;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #1e293b;
+  margin: 32px 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+th, td {
+  border: 1px solid #1e293b;
+  padding: 10px;
+}
+
+th {
+  background: #020617;
+}
+
+.right {
+  text-align: right;
+  font-weight: 600;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <h2>⏱ Time Duration Converter</h2>
+  <p>Format: <code>DD/MM/YYYY / HH:mm</code></p>
+
+  <label>Start Time</label>
+  <input id="startText" placeholder="12/11/2025 / 02:18">
+
+  <label>End Time</label>
+  <input id="endText" placeholder="12/11/2025 / 02:30">
+
+  <button onclick="calcDuration()">Calculate Duration</button>
+
+  <div id="durationOutput" class="result"></div>
+
+  <hr>
+
+  <h2>📉 Reverse SLA Calculator</h2>
+
+  <label>Downtime Duration</label>
+  <input id="downtimeInput" placeholder="2h 20m 0s">
+
+  <button onclick="calcSLA()">Calculate SLA</button>
+
+  <div id="slaOutput" class="result"></div>
+
+</div>
+
+<script>
+/* ======================
+   UTIL
+====================== */
+function pad(n) {
+  return n.toString().padStart(2, "0");
+}
+
+function formatDate(d) {
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}, ` +
+         `${pad(d.getHours())}.${pad(d.getMinutes())}.00`;
+}
+
+/* ======================
+   DATE PARSER
+====================== */
+function parseDate(str) {
+  const m = str.match(/(\d{2})\/(\d{2})\/(\d{4})\s*\/\s*(\d{2}):(\d{2})/);
+  if (!m) return null;
+  return new Date(`${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}:00`);
+}
+
+/* ======================
+   TIME CALC
+====================== */
+function calcDuration() {
+  const start = parseDate(startText.value.trim());
+  const end   = parseDate(endText.value.trim());
+
+  if (!start || !end || end <= start) {
+    alert("Invalid date format");
+    return;
+  }
+
+  const diff = end - start;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours   = Math.floor(minutes / 60);
+
+  durationOutput.innerHTML = `
+    <strong>From:</strong> ${formatDate(start)}<br>
+    <strong>To:</strong> ${formatDate(end)}<br><br>
+
+    <strong>Duration</strong>
+    <ul>
+      <li>${hours} hours ${minutes % 60} minutes ${seconds % 60} seconds</li>
+      <li>${minutes} minutes</li>
+      <li>${seconds} seconds</li>
+    </ul>
+  `;
+}
+
+/* ======================
+   SLA
+====================== */
+function parseDowntime(str) {
+  let t = 0;
+  if (str.match(/(\d+)h/)) t += RegExp.$1 * 3600;
+  if (str.match(/(\d+)m/)) t += RegExp.$1 * 60;
+  if (str.match(/(\d+)s/)) t += RegExp.$1;
+  return t;
+}
+
+function calcSLA() {
+  const down = parseDowntime(downtimeInput.value.trim());
+  if (!down) {
+    alert("Use format: 2h 20m 0s");
+    return;
+  }
+
+const day = 86400;
+
+const periods = [
+  ["Daily reporting", day],
+  ["Weekly reporting", day * 7],
+  ["Monthly reporting", day * (365 / 12)],      // 30.4167 days
+  ["Quarterly reporting", day * (365 / 4)],     // 91.25 days
+  ["Yearly reporting", day * 365],
+];
+
+  slaOutput.innerHTML = `
+    <p>
+      Downtime with a duration of <strong>${downtimeInput.value}</strong>
+      during a reporting period is equal to the following SLA uptime percentages:
+    </p>
+
+    <table>
+      <tr>
+        <th>SLA percentage by reporting period</th>
+        <th class="right">Uptime %</th>
+      </tr>
+      ${periods.map(p =>
+        `<tr>
+          <td>${p[0]}</td>
+          <td class="right">${(((p[1] - down) / p[1]) * 100).toFixed(4)}%</td>
+        </tr>`
+      ).join("")}
+    </table>
+  `;
+}
+</script>
+
+</body>
+</html>
